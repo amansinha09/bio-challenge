@@ -9,11 +9,11 @@ Track 3: [Automatic extraction of medication names in tweets](https://biocreativ
 
 
 
-TODOs:
+## TODOs
 
 [x] Build corpora from SMM4H18 trainset
-[] Make evaluation code ready
-[] Make src ready from notebook
-[] Put it on grid
-[] Run initial baseline - only biotrainset
-[] 
+[ ] Make evaluation code ready
+[ ] Make src ready from notebook
+[ ] Put it on grid
+[ ] Run initial baseline - only biotrainset
+[ ] 
