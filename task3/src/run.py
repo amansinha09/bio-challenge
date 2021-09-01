@@ -39,6 +39,8 @@ def train(model, trainloader, epoch,all_steps, optimizer, writer):
 			writer.add_scalar('Average Training loss ', tr_loss/ tr_steps, all_steps)
 		loss.backward()
 		optimizer.step()
+
+	return all_steps
 		
 def eval(model, testloader,e , all_steps, writer, save_preds=False):
 	test_loss, test_steps = 0,0
@@ -58,6 +60,8 @@ def eval(model, testloader,e , all_steps, writer, save_preds=False):
 		
 		print(f'Testing loss: {test_loss/ test_steps}')
 		writer.add_scalar('Average dev loss ', test_loss/ test_steps, all_steps)
+
+	return all_steps
 
 
 
@@ -107,12 +111,11 @@ def main(params):
 	writer = SummaryWriter(f'{params.save_model_dir}/ner_baseline_{params.model_id}')
 
 	for e in range(EPOCHS):
-		train(model, trainloader, e, all_steps, optimizer, writer)
+		all_steps = train(model, trainloader, e, all_steps, optimizer, writer)
 		if e % params.test_every == 0:
-			eval(model, devloader, e , all_steps, writer, save_preds=False)
+			all_steps = eval(model, devloader, e , all_steps, writer, save_preds=False)
 
-	torch.save(model.state_dict(), f"{params.save_model_dir}/model_{params.model_id}_e{e}.pth"); print('model saved !!')
-#           
+	torch.save(model.state_dict(), f"{params.save_model_dir}/model_{params.model_id}_e{e}.pth"); print('model saved !!')   
 
 
 
@@ -145,6 +148,8 @@ if __name__ == '__main__':
 					   help='Model dir')
 	parser.add_argument('--model_id', default=1,
 					   help='model name identifier')
+	parser.add_argument('--save_preds', default=False, 
+						help='whether to save the preditions')
 	
 
 
