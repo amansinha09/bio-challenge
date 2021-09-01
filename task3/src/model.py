@@ -8,9 +8,9 @@ import torch.nn as nn
 
 
 
-class nermodel(torch.nn.Module):
+class charner(torch.nn.Module):
     def __init__(self, params):
-        super(nermodel, self).__init__()
+        super(charner, self).__init__()
         self.device = params.device
         self.hiddensize = params.hs
         self.num_layer = params.nl
@@ -31,7 +31,7 @@ class nermodel(torch.nn.Module):
     def forward(self, x):
         #print('x_i:',x.shape, 'h0:',self.h0.shape)
         self.h0 = torch.randn(self.bidir * self.num_layer, 
-                              x.shape[0], self.hiddensize)
+                              x.shape[0], self.hiddensize, device=self.device)
         x = self.char_embedding(x)
         rnn_otpt, hn = self.rnn(x, self.h0)
         #print(rnn_otpt.shape)

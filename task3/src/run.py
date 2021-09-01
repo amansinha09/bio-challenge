@@ -7,6 +7,7 @@ import argparse
 
 import torch
 import torch.nn as nn
+from torch.utils.tensorboard import SummaryWriter
 
 from data import *
 from model import *
@@ -14,28 +15,32 @@ from utils import *
 
 
 loss_function = torch.nn.BCEWithLogitsLoss() #torch.nn.CrossEntropyLoss()
+all_steps = 0
+writer = SummaryWriter(f'{params.save_model_dir}/ewiser_{params.model_id}')
+
 
 def train(model, trainloader, epoch, optimizer):
-	tr_loss, tr_steps = 0,0
-	n_correct = 0
+	tr_loss, tr_steps = 0,0 
+	n_correct = 0	    
 	
 	model.train()
 	for _, data in tqdm(enumerate(trainloader)):
 		optimizer.zero_grad()
-		ids = data['ids']#.to(device, dtype=torch.long)
-		tar = data['targets']#.to(device, dtype=torch.long)
+		ids = data['ids'].to(params.device, dtype=torch.long)
+		tar = data['targets'].to(params.device, dtype=torch.long)
 		output = model(ids).squeeze(-1)
 		loss = loss_function(output, tar)
 		tr_loss += loss.item()
 		tr_steps += 1
+		all_steps += 1
 		
 		if _ % 50 == 0:
 			print(f' Training loss per 50 step : {tr_loss/ tr_steps}')
-			
+			writer.add_scalar('Average Training loss ', tr_loss/ tr_steps, all_steps)
 		loss.backward()
 		optimizer.step()
 		
-def eval(model, testloader):
+def eval(model, testloader,e , save_preds=False):
 	test_loss, test_steps = 0,0
 	n_correct = 0
 	
@@ -43,8 +48,8 @@ def eval(model, testloader):
 	with torch.no_grad():
 		for _, data in tqdm(enumerate(testloader)):
 			
-			ids = data['ids']#.to(device, dtype=torch.long)
-			tar = data['targets']#.to(device, dtype=torch.long)
+			ids = data['ids'].to(params.device, dtype=torch.long)
+			tar = data['targets'].to(params.device, dtype=torch.long)
 			output = model(ids).squeeze(-1)
 			loss = loss_function(output, tar)
 			test_loss += loss.item()
@@ -52,6 +57,7 @@ def eval(model, testloader):
 
 		
 		print(f'Testing loss: {test_loss/ test_steps}')
+		writer.add_scalar('Average dev loss ', test_loss/ test_steps, all_steps)
 
 
 
@@ -77,6 +83,7 @@ def main(params):
 	# devdf - subsampled ddf
 	ddf = pd.concat([dpdf,dndf.iloc[:396]])
 	ddf = ddf.sample(frac=1)
+	ddf.to_csv('~/bio-challenge/ref/ddf.csv', sep='\t')
 
 	# load dataloader
 	train_set = biodata(tdf, name='train')
@@ -92,14 +99,17 @@ def main(params):
 	trainloader = DataLoader(train_set, **train_params)
 	devloader = DataLoader(dev_set, **dev_params)
 
-	model = nermodel(params)
+	model = charner(params)
 	optimizer = torch.optim.Adam(params =model.parameters(), lr=params.lr)
 	EPOCHS = 2
 
 	for e in range(EPOCHS):
 		train(model, trainloader, e, optimizer)
 		if e % params.test_every == 0:
-			eval(model, devloader)
+			eval(model, devloader, e , save_preds=False)
+
+	torch.save(model.state_dict(), f"{params.save_model_dir}/model_{params.model_id}_e{e}.pth"); print('model saved !!')
+#           
 
 
 
@@ -126,6 +136,11 @@ if __name__ == '__main__':
 						help="Learning rate of loss optimization")
 	parser.add_argument('--test_every', default=1,
 					   help='Testing after steps')
+	parser.add_argument('--save_model_dir', default=1,
+					   help='Model dir')
+	parser.add_argument('--model_id', default=1,
+					   help='model name identifier')
+	
 
 
 	params,_ = parser.parse_known_args()
