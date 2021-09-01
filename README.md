@@ -34,8 +34,9 @@ Create two folder in home directory : ```ref/``` and ```res/```. Add the predict
 - [x] Build corpora from SMM4H18 trainset
 - [x] Make evaluation code ready
 - [x] Make src ready from notebook
-- [ ] add gpu running feature
-- [ ] Put it on grid
+- [x] add gpu running feature
+- [x] Put it on grid
+- [ ] Add inference code
 - [ ] Run initial baseline char-rnn - only biotrainset
 - [ ] Create word-rnn model 
 - [ ] Use different/custom losses

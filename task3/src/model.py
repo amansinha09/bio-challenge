@@ -32,8 +32,8 @@ class charner(torch.nn.Module):
         #print('x_i:',x.shape, 'h0:',self.h0.shape)
         self.h0 = torch.randn(self.bidir * self.num_layer, 
                               x.shape[0], self.hiddensize, device=self.device)
-        x = self.char_embedding(x)
-        rnn_otpt, hn = self.rnn(x, self.h0)
+        x = self.char_embedding(x.to(self.device))
+        rnn_otpt, hn = self.rnn(x.to(self.device), self.h0)
         #print(rnn_otpt.shape)
         fc_otpt = self.relu(self.fc(rnn_otpt))
         #print('o shape:',fc_otpt.shape)

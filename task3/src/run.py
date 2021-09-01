@@ -15,11 +15,11 @@ from utils import *
 
 
 loss_function = torch.nn.BCEWithLogitsLoss() #torch.nn.CrossEntropyLoss()
-all_steps = 0
-writer = SummaryWriter(f'{params.save_model_dir}/ewiser_{params.model_id}')
+#all_steps = 0
+#writer = SummaryWriter(f'{params.save_model_dir}/ewiser_{params.model_id}')
 
 
-def train(model, trainloader, epoch, optimizer):
+def train(model, trainloader, epoch,all_steps, optimizer, writer):
 	tr_loss, tr_steps = 0,0 
 	n_correct = 0	    
 	
@@ -27,7 +27,7 @@ def train(model, trainloader, epoch, optimizer):
 	for _, data in tqdm(enumerate(trainloader)):
 		optimizer.zero_grad()
 		ids = data['ids'].to(params.device, dtype=torch.long)
-		tar = data['targets'].to(params.device, dtype=torch.long)
+		tar = data['targets'].to(params.device)
 		output = model(ids).squeeze(-1)
 		loss = loss_function(output, tar)
 		tr_loss += loss.item()
@@ -40,7 +40,7 @@ def train(model, trainloader, epoch, optimizer):
 		loss.backward()
 		optimizer.step()
 		
-def eval(model, testloader,e , save_preds=False):
+def eval(model, testloader,e , all_steps, writer, save_preds=False):
 	test_loss, test_steps = 0,0
 	n_correct = 0
 	
@@ -49,7 +49,7 @@ def eval(model, testloader,e , save_preds=False):
 		for _, data in tqdm(enumerate(testloader)):
 			
 			ids = data['ids'].to(params.device, dtype=torch.long)
-			tar = data['targets'].to(params.device, dtype=torch.long)
+			tar = data['targets'].to(params.device)
 			output = model(ids).squeeze(-1)
 			loss = loss_function(output, tar)
 			test_loss += loss.item()
@@ -83,7 +83,7 @@ def main(params):
 	# devdf - subsampled ddf
 	ddf = pd.concat([dpdf,dndf.iloc[:396]])
 	ddf = ddf.sample(frac=1)
-	ddf.to_csv('~/bio-challenge/ref/ddf.csv', sep='\t')
+	ddf.to_csv('~/bio-challenge/task3/ref/ddf.csv', sep='\t')
 
 	# load dataloader
 	train_set = biodata(tdf, name='train')
@@ -99,14 +99,17 @@ def main(params):
 	trainloader = DataLoader(train_set, **train_params)
 	devloader = DataLoader(dev_set, **dev_params)
 
-	model = charner(params)
+	model = charner(params).cuda()
 	optimizer = torch.optim.Adam(params =model.parameters(), lr=params.lr)
-	EPOCHS = 2
+	EPOCHS = params.epochs
+	all_steps = 0
+
+	writer = SummaryWriter(f'{params.save_model_dir}/ner_baseline_{params.model_id}')
 
 	for e in range(EPOCHS):
-		train(model, trainloader, e, optimizer)
+		train(model, trainloader, e, all_steps, optimizer, writer)
 		if e % params.test_every == 0:
-			eval(model, devloader, e , save_preds=False)
+			eval(model, devloader, e , all_steps, writer, save_preds=False)
 
 	torch.save(model.state_dict(), f"{params.save_model_dir}/model_{params.model_id}_e{e}.pth"); print('model saved !!')
 #           
@@ -116,10 +119,12 @@ def main(params):
 if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser(description="Running ner...")
-	parser.add_argument('--device', default = torch.device('cpu'), 
+	parser.add_argument('--device', default = torch.device('cuda'), 
 						help='cpu or gpu')
 	parser.add_argument('--hs', default=768, type=int,
 						help='Hidden layer size')
+	parser.add_argument('--epochs', default=1, type=int, 
+						help='Number of epochs')
 	parser.add_argument('--bs', default=32, 
 						help='batch size')
 	parser.add_argument('--nl', default=2, 
