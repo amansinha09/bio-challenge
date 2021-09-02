@@ -14,57 +14,6 @@ from model import *
 from utils import *
 
 
-loss_function = torch.nn.BCEWithLogitsLoss() #torch.nn.CrossEntropyLoss()
-#all_steps = 0
-#writer = SummaryWriter(f'{params.save_model_dir}/ewiser_{params.model_id}')
-
-
-def train(model, trainloader, epoch,all_steps, optimizer, writer):
-	tr_loss, tr_steps = 0,0 
-	n_correct = 0	    
-	
-	model.train()
-	for _, data in tqdm(enumerate(trainloader)):
-		optimizer.zero_grad()
-		ids = data['ids'].to(params.device, dtype=torch.long)
-		tar = data['targets'].to(params.device)
-		output = model(ids).squeeze(-1)
-		loss = loss_function(output, tar)
-		tr_loss += loss.item()
-		tr_steps += 1
-		all_steps += 1
-		
-		if _ % 50 == 0:
-			print(f' Training loss per 50 step : {tr_loss/ tr_steps}')
-			writer.add_scalar('Average Training loss ', tr_loss/ tr_steps, all_steps)
-		loss.backward()
-		optimizer.step()
-
-	return all_steps
-		
-def eval(model, testloader,e , all_steps, writer, save_preds=False):
-	test_loss, test_steps = 0,0
-	n_correct = 0
-	
-	model.eval()
-	with torch.no_grad():
-		for _, data in tqdm(enumerate(testloader)):
-			
-			ids = data['ids'].to(params.device, dtype=torch.long)
-			tar = data['targets'].to(params.device)
-			output = model(ids).squeeze(-1)
-			loss = loss_function(output, tar)
-			test_loss += loss.item()
-			test_steps += 1
-
-		
-		print(f'Testing loss: {test_loss/ test_steps}')
-		writer.add_scalar('Average dev loss ', test_loss/ test_steps, all_steps)
-
-	return all_steps
-
-
-
 def main(params):
 
 	# Load dataset
@@ -73,7 +22,6 @@ def main(params):
 
 	train_df = pd.read_csv('~/bio-challenge/data/SMM4H18_train_modified.csv', sep='\t')
 	train_df.head()
-
 
 	# positive samples
 	tpdf = train_df.loc[train_df['start'] != '-']
@@ -103,17 +51,54 @@ def main(params):
 	trainloader = DataLoader(train_set, **train_params)
 	devloader = DataLoader(dev_set, **dev_params)
 
-	model = charner(params).cuda()
+	model = charner(params).to(device=params.device)
+
+	loss_function = torch.nn.BCEWithLogitsLoss() #torch.nn.CrossEntropyLoss()
 	optimizer = torch.optim.Adam(params =model.parameters(), lr=params.lr)
+
 	EPOCHS = params.epochs
 	all_steps = 0
 
 	writer = SummaryWriter(f'{params.save_model_dir}/ner_baseline_{params.model_id}')
 
+	eloss = []
 	for e in range(EPOCHS):
-		all_steps = train(model, trainloader, e, all_steps, optimizer, writer)
+		tr_loss, tr_steps = 0,0
+
+		model.train()
+		for _, data in tqdm(enumerate(trainloader)):
+			optimizer.zero_grad()
+			ids = data['ids'].to(params.device, dtype=torch.long)
+			tar = data['targets'].to(params.device)
+			output = model(ids).squeeze(-1)
+			loss = loss_function(output, tar)
+			tr_loss += loss.item()
+			tr_steps += 1
+			all_steps += 1
+			
+			if _ % 50 == 0:
+				print(f' Training loss per 50 step : {(np.sum(eloss)+tr_loss)/ all_steps}')
+				writer.add_scalar('Average Training loss ', (np.sum(eloss)+tr_loss)/ all_steps, all_steps)
+			loss.backward()
+			optimizer.step()
+
+		eloss.append(tr_loss)
+
 		if e % params.test_every == 0:
-			all_steps = eval(model, devloader, e , all_steps, writer, save_preds=False)
+			test_loss, test_steps = 0,0
+			model.eval()
+			with torch.no_grad():
+				for _, data in tqdm(enumerate(testloader)):
+					
+					ids = data['ids'].to(params.device, dtype=torch.long)
+					tar = data['targets'].to(params.device)
+					d_output = model(ids).squeeze(-1)
+					d_loss = loss_function(d_output, tar)
+					test_loss += d_loss.item()
+					test_steps += 1
+
+				print(f'Testing loss: {test_loss/ test_steps}')
+				writer.add_scalar('Average dev loss ', test_loss/ test_steps, all_steps)
 
 	torch.save(model.state_dict(), f"{params.save_model_dir}/model_{params.model_id}_e{e}.pth"); print('model saved !!')   
 

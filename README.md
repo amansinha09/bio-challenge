@@ -39,18 +39,17 @@ pip3 install -r requirements.txt
 ```
 bio-challenge/
 	|-- data/
-	|-- task3/
-		|-- src/
-			|-- data.py
-			[-- utils.py
-			|-- evaluation.py
-			|-- model.py
-			|-- run.py
-		|-- ref/
-		|-- res/
-		|-- .logs/
-		|-- .model/
-		|--run_exp.sh
+	|-- src/
+		|-- data.py
+		[-- utils.py
+		|-- evaluation.py
+		|-- model.py
+		|-- run.py
+	|-- ref/
+	|-- res/
+	|-- .logs/
+	|-- .model/
+	|--run_exp.sh
 	|-- README.md
 ```
 
