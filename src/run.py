@@ -123,9 +123,9 @@ if __name__ == '__main__':
 						help='Number of epochs')
 	parser.add_argument('--bs', default=32, 
 						help='batch size')
-	parser.add_argument('--nl', default=2, 
+	parser.add_argument('--nl', default=2, type=int,
 						help='Number of layers')
-	parser.add_argument('--bidir', default=1,
+	parser.add_argument('--bidir', default=False, action="store_true",
 					   help='bi-directional')
 	parser.add_argument('--inplen', default=50,
 					   help='sequence/sentence length')
@@ -141,9 +141,9 @@ if __name__ == '__main__':
 					   help='Model dir')
 	parser.add_argument('--model_id', default=1,
 					   help='model name identifier')
-	parser.add_argument('--save_preds', default=False, 
+	parser.add_argument('--save_preds', action="store_true", 
 						help='whether to save the preditions')
-	parser.add_argument('--save_model', default=False, 
+	parser.add_argument('--save_model', action="store_true", 
 						help='whether to save the model')
 	
 

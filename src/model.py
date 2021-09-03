@@ -19,18 +19,19 @@ class charner(torch.nn.Module):
         self.inplen = params.inplen
         self.inpsize = params.inpsize
         self.vocabsize = params.vocabsize
-        
+        self.bd = 2 if self.bidir else 1
         self.char_embedding = nn.Embedding(self.vocabsize, self.inpsize)
         # keep batch first
         self.rnn = nn.GRU(params.inpsize, params.hs, \
-                          num_layers=self.num_layer, batch_first=True)
+                          num_layers=self.num_layer, batch_first=True, \
+                          bidirectional = self.bidir)
         
-        self.fc = torch.nn.Linear(self.bidir * self.hiddensize, 1)
+        self.fc = torch.nn.Linear(self.bd * self.hiddensize, 1)
         self.relu = torch.nn.ReLU()
         
     def forward(self, x):
         #print('x_i:',x.shape, 'h0:',self.h0.shape)
-        self.h0 = torch.randn(self.bidir * self.num_layer, 
+        self.h0 = torch.randn(self.bd * self.num_layer, 
                               x.shape[0], self.hiddensize, device=self.device)
         x = self.char_embedding(x.to(self.device))
         rnn_otpt, hn = self.rnn(x.to(self.device), self.h0)
