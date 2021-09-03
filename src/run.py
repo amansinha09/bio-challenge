@@ -35,7 +35,7 @@ def main(params):
 	# devdf - subsampled ddf
 	ddf = pd.concat([dpdf,dndf.iloc[:396]])
 	ddf = ddf.sample(frac=1)
-	ddf.to_csv('~/bio-challenge/task3/ref/ddf.csv', sep='\t')
+	ddf.to_csv('~/bio-challenge/ref/ddf.csv', sep='\t')
 
 	# load dataloader
 	train_set = biodata(tdf, name='train')
@@ -59,7 +59,7 @@ def main(params):
 	EPOCHS = params.epochs
 	all_steps = 0
 
-	writer = SummaryWriter(f'{params.save_model_dir}/ner_baseline_{params.model_id}')
+	writer = SummaryWriter(f'{params.save_dir}/ner_baseline_{params.model_id}')
 
 	eloss = []
 	for e in range(EPOCHS):
@@ -77,7 +77,7 @@ def main(params):
 			all_steps += 1
 			
 			if _ % 50 == 0:
-				print(f' Training loss per 50 step : {(np.sum(eloss)+tr_loss)/ all_steps}')
+				print(f' Average training loss after {tr_steps} step, {e+1}/{EPOCHS} epoch : {(np.sum(eloss)+tr_loss)/ all_steps}')
 				writer.add_scalar('Average Training loss ', (np.sum(eloss)+tr_loss)/ all_steps, all_steps)
 			loss.backward()
 			optimizer.step()
@@ -86,21 +86,29 @@ def main(params):
 
 		if e % params.test_every == 0:
 			test_loss, test_steps = 0,0
+			outputs = []
 			model.eval()
 			with torch.no_grad():
-				for _, data in tqdm(enumerate(testloader)):
+				for _, data in tqdm(enumerate(devloader)):
 					
 					ids = data['ids'].to(params.device, dtype=torch.long)
 					tar = data['targets'].to(params.device)
 					d_output = model(ids).squeeze(-1)
+					outputs.append(d_output.detach().numpy())
 					d_loss = loss_function(d_output, tar)
 					test_loss += d_loss.item()
 					test_steps += 1
 
-				print(f'Testing loss: {test_loss/ test_steps}')
+				print(f'Testing loss after {e+1}/{EPOCHS}: {test_loss/ test_steps}')
 				writer.add_scalar('Average dev loss ', test_loss/ test_steps, all_steps)
+				
+				if params.save_preds and (e == params.epochs):
+					ooo = torch.from_numpy(np.vstack(outputs)>1).float()
+					create_pred_file(ddf, ooo, name=params.model_id)
 
-	torch.save(model.state_dict(), f"{params.save_model_dir}/model_{params.model_id}_e{e}.pth"); print('model saved !!')   
+
+	if params.save_model : 
+		torch.save(model.state_dict(), f"{params.save_dir}/model_{params.model_id}_e{e}.pth"); print('model saved !!')   
 
 
 
@@ -129,12 +137,14 @@ if __name__ == '__main__':
 						help="Learning rate of loss optimization")
 	parser.add_argument('--test_every', default=1,
 					   help='Testing after steps')
-	parser.add_argument('--save_model_dir', default=1,
+	parser.add_argument('--save_dir', default='./.model/',
 					   help='Model dir')
 	parser.add_argument('--model_id', default=1,
 					   help='model name identifier')
 	parser.add_argument('--save_preds', default=False, 
 						help='whether to save the preditions')
+	parser.add_argument('--save_model', default=False, 
+						help='whether to save the model')
 	
 
 

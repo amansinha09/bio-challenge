@@ -185,6 +185,8 @@ def evaluate():
     # Get path to the gold standard annotation file and score file
     if path.exists(os.path.join(input_dir, 'ref/BioCreative_ValTask3.tsv')):
         gold_file = os.path.join(input_dir, 'ref/BioCreative_ValTask3.tsv')
+    elif path.exists(os.path.join(input_dir, 'ref/ddf.csv')):
+        gold_file = os.path.join(input_dir, 'ref/ddf.csv')
     else:
         if path.exists(os.path.join(input_dir, 'ref/BioCreative_TestTask3.tsv')):
             gold_file = os.path.join(input_dir, 'ref/BioCreative_TestTask3.tsv')
