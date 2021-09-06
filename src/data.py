@@ -17,7 +17,7 @@ class biodata(Dataset):
         self.vocab = vocab
         self.vdict = None
         self.create_vocab(vocab)
-        self.data['text'] = self.data['text'].apply(lambda x: x.lower())
+        #self.data['text'] = self.data['text'].apply(lambda x: x.lower())
         
     def __getitem__(self, index):
         sen = self.data['text'].iloc[index]

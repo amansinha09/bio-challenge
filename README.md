@@ -57,7 +57,6 @@ bio-challenge/
 
 
 ```
-cd tasks/
 mkdir ref/ res/ .model/ .logs/
 cd .logs/
 sh ../run_exp.sh
@@ -66,10 +65,11 @@ sh ../run_exp.sh
 Change the parameters for custom experiments :
 
 ```
-usage: run.py [-h] [--device DEVICE] [--hs HS] [--epochs EPOCHS] [--bs BS] [--nl NL] [--bidir BIDIR]
-              [--inplen INPLEN] [--inpsize INPSIZE] [--vocabsize VOCABSIZE] [--lr LR]
-              [--test_every TEST_EVERY] [--save_model_dir SAVE_MODEL_DIR] [--model_id MODEL_ID]
-              [--save_preds SAVE_PREDS]
+usage: run.py [-h] [--device DEVICE] [--hs HS] [--epochs EPOCHS] [--bs BS]
+              [--nl NL] [--bidir] [--inplen INPLEN] [--inpsize INPSIZE]
+              [--vocabsize VOCABSIZE] [--lr LR] [--test_every TEST_EVERY]
+              [--save_dir SAVE_DIR] [--model_id MODEL_ID] [--save_preds]
+              [--save_model] [--stop_early]
 
 Running ner...
 
@@ -80,7 +80,7 @@ optional arguments:
   --epochs EPOCHS       Number of epochs
   --bs BS               batch size
   --nl NL               Number of layers
-  --bidir BIDIR         bi-directional
+  --bidir               bi-directional
   --inplen INPLEN       sequence/sentence length
   --inpsize INPSIZE     embedding size
   --vocabsize VOCABSIZE
@@ -88,14 +88,13 @@ optional arguments:
   --lr LR               Learning rate of loss optimization
   --test_every TEST_EVERY
                         Testing after steps
-  --save_model_dir SAVE_MODEL_DIR
-                        Model dir
+  --save_dir SAVE_DIR   Model dir
   --model_id MODEL_ID   model name identifier
-  --save_preds SAVE_PREDS
-                        whether to save the preditions
-
+  --save_preds          whether to save the preditions
+  --save_model          whether to save the model
+  --stop_early          whether to use early stopping
 ```
 
 ### For evalution
 
-Add the prediction file into the res/ folder and test file in the ref/ folder, then run the evalution script: ``` python src/evaluation.py ref/ res/```.
+Add the prediction file into the res/ folder and test file in the ref/ folder, then run the evalution script: ``` python src/evaluation.py ref/<gold_file> res/<pred_file>```

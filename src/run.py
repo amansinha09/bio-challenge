@@ -88,7 +88,7 @@ def main(params):
 
 		eloss.append(tr_loss)
 
-		if e % params.test_every == 0:
+		if e+1 % params.test_every == 0:
 			test_loss, test_steps = 0,0
 			outputs = []
 			model.eval()
@@ -106,10 +106,10 @@ def main(params):
 				print(f'------- Testing loss after {e+1}/{EPOCHS}: {test_loss/ test_steps}')
 				writer.add_scalar('Average dev loss ', test_loss/ test_steps, all_steps)
 				
-			if params.save_preds:
+			if params.save_preds or (e == EPOCHS-1):
 				ooo = torch.from_numpy(np.vstack(outputs)>1).float()
-				create_pred_file(ddf, ooo, name=params.model_id + f'_{e}')
-				print('{e}th epoch prediction saved!!')
+				create_pred_file(ddf, ooo, name=params.model_id + f'_{e}', save_dir=params.save_dir)
+				print(f'{e}th epoch prediction saved!!')
 
 		if params.stop_early:
 			early_stopping(test_loss, model)

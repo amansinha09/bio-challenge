@@ -32,7 +32,10 @@ def load_dataset(gfile):
     :return: a dictionary tweet_id => tweet object (with their list of expected annotations)
     """
     tw_int_map = {}
-    df = pd.read_csv(gfile, sep='\t')
+    try:
+        df = pd.read_csv(gfile, sep='\t')
+    except:
+        df = pd.read_csv(gfile)
     #def createTweets(tw:series, tw_int_map:dict):
     def createTweets(tw, tw_int_map):
         #create the tweet or retrieve the tweet if the tweet contains multiple drugs
@@ -165,8 +168,9 @@ def evaluate():
         log.error("Invalid input parameters. Format:\
                   \n python evaluation.py [input_dir] [output_dir]")
         sys.exit(0)
-    [_, input_dir, output_dir] = sys.argv
-
+    #[_, input_dir, output_dir] = sys.argv
+    [_, input_file, output_file] = sys.argv ; output_dir = './res/'
+    '''
     # get files in prediction zip file
     pred_dir = os.path.join(input_dir, 'res')
     pred_files = [x for x in os.listdir(pred_dir) if not os.path.isdir(os.path.join(pred_dir, x))]
@@ -193,6 +197,9 @@ def evaluate():
         else:
             log.error("Could not find the goldstandard file in the ref directory.")
             sys.exit(0)
+    '''
+    pred_file, gold_file = output_file, input_file
+
     log.info("Pred file:%s, Gold file:%s", pred_file, gold_file)
     out_file = os.path.join(output_dir, 'scores.txt')
     log.info("Output file:%s", out_file)

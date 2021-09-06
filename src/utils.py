@@ -6,11 +6,11 @@ import pandas as pd
 
 
 
-def create_pred_file(ddf, output, name):
+def create_pred_file(ddf, output, name, save_dir):
 	predques = ddf.iloc[:, 0:4].copy()
 
 	spans = []
-	for t in ooo:
+	for t in output:
 	    span = []
 	    start,end = -1,-1
 	    for i,tt in enumerate(t):
@@ -39,7 +39,7 @@ def create_pred_file(ddf, output, name):
 	    
 	predans = pd.DataFrame(rest_columens, columns=['start', 'end', 'span', 'drug'])      
 	pred = pd.concat([predques.reset_index(drop=True), predans.reset_index(drop=True)], axis = 1, )
-	pred.to_csv(f'pred_{name}.csv')
+	pred.to_csv(f'{save_dir}/pred_{name}.csv', sep='\t')
 
 
 class EarlyStopping:
