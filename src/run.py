@@ -30,12 +30,15 @@ def main(params):
 	dndf = dev_df.loc[dev_df['start'] == '-']
 
 	# traindf - subsampled tdf
-	tdf = pd.concat([tpdf,tndf.iloc[:877]])
+	tdf = pd.concat([tpdf,tndf])
 	tdf = tdf.sample(frac=1)
 	# devdf - subsampled ddf
 	ddf = pd.concat([dpdf,dndf.iloc[:396]])
 	ddf = ddf.sample(frac=1)
-	ddf.to_csv('~/bio-challenge/ref/ddf.csv', sep='\t')
+	ddf.to_csv(f'~/bio-challenge/ref/ddf_{params.model_id}.csv', sep='\t')
+
+	print(f"Number of train samples: {len(tdf)}")
+	print(f"Number of dev samples: {len(ddf)}")
 
 	# load dataloader
 	train_set = biodata(tdf, name='train')
@@ -60,7 +63,7 @@ def main(params):
 	all_steps = 0
 
 	writer = SummaryWriter(f'{params.save_dir}/ner_baseline_{params.model_id}')
-	early_stopping = utils.EarlyStopping(patience=5, verbose=True, save_path=f'{params.save_dir}/ner_{params.model_id}.pt')
+	early_stopping = EarlyStopping(patience=5, verbose=True, save_path=f'{params.save_dir}/ner_{params.model_id}.pt')
 
 	eloss = []
 	for e in range(EPOCHS):
@@ -78,7 +81,7 @@ def main(params):
 			all_steps += 1
 			
 			if _ % 50 == 0:
-				print(f' Average training loss after {tr_steps} step, {e+1}/{EPOCHS} epoch : {(np.sum(eloss)+tr_loss)/ all_steps}')
+				print(f'Average training loss after {tr_steps} step, {e+1}/{EPOCHS} epoch : {(np.sum(eloss)+tr_loss)/ all_steps}')
 				writer.add_scalar('Average Training loss ', (np.sum(eloss)+tr_loss)/ all_steps, all_steps)
 			loss.backward()
 			optimizer.step()
@@ -95,17 +98,18 @@ def main(params):
 					ids = data['ids'].to(params.device, dtype=torch.long)
 					tar = data['targets'].to(params.device)
 					d_output = model(ids).squeeze(-1)
-					outputs.append(d_output.detach().numpy())
+					outputs.append(d_output.cpu().detach().numpy())
 					d_loss = loss_function(d_output, tar)
 					test_loss += d_loss.item()
 					test_steps += 1
 
-				print(f'Testing loss after {e+1}/{EPOCHS}: {test_loss/ test_steps}')
+				print(f'------- Testing loss after {e+1}/{EPOCHS}: {test_loss/ test_steps}')
 				writer.add_scalar('Average dev loss ', test_loss/ test_steps, all_steps)
 				
-			if params.save_preds and (e == params.epochs):
+			if params.save_preds:
 				ooo = torch.from_numpy(np.vstack(outputs)>1).float()
-				create_pred_file(ddf, ooo, name=params.model_id)
+				create_pred_file(ddf, ooo, name=params.model_id + f'_{e}')
+				print('{e}th epoch prediction saved!!')
 
 		if params.stop_early:
 			early_stopping(test_loss, model)
@@ -143,7 +147,7 @@ if __name__ == '__main__':
 					   help='vocab size')
 	parser.add_argument('--lr', default= 0.001, type=float,
 						help="Learning rate of loss optimization")
-	parser.add_argument('--test_every', default=1,
+	parser.add_argument('--test_every', default=5, type=int,
 					   help='Testing after steps')
 	parser.add_argument('--save_dir', default='./.model/',
 					   help='Model dir')

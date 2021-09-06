@@ -4,8 +4,8 @@ source ~/pyt/bin/activate
 
 python ~/bio-challenge/src/run.py --device cuda \
 					--save_dir ~/bio-challenge/.model/ --save_preds --save_model \
-					--model trial_7 \
-					--epoch 50 --bidir
+					--model trial_11 \
+					--epoch 10
 
 
 # For evaluating prediction by competition script

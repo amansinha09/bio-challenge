@@ -36,6 +36,6 @@ class charner(torch.nn.Module):
         x = self.char_embedding(x.to(self.device))
         rnn_otpt, hn = self.rnn(x.to(self.device), self.h0)
         #print(rnn_otpt.shape)
-        fc_otpt = self.relu(self.fc(rnn_otpt))
+        fc_otpt = self.fc(rnn_otpt)#self.relu(self.fc(rnn_otpt))
         #print('o shape:',fc_otpt.shape)
         return fc_otpt  
