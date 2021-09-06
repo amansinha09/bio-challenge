@@ -60,6 +60,7 @@ def main(params):
 	all_steps = 0
 
 	writer = SummaryWriter(f'{params.save_dir}/ner_baseline_{params.model_id}')
+	early_stopping = utils.EarlyStopping(patience=5, verbose=True, save_path=f'{params.save_dir}/ner_{params.model_id}.pt')
 
 	eloss = []
 	for e in range(EPOCHS):
@@ -102,9 +103,16 @@ def main(params):
 				print(f'Testing loss after {e+1}/{EPOCHS}: {test_loss/ test_steps}')
 				writer.add_scalar('Average dev loss ', test_loss/ test_steps, all_steps)
 				
-				if params.save_preds and (e == params.epochs):
-					ooo = torch.from_numpy(np.vstack(outputs)>1).float()
-					create_pred_file(ddf, ooo, name=params.model_id)
+			if params.save_preds and (e == params.epochs):
+				ooo = torch.from_numpy(np.vstack(outputs)>1).float()
+				create_pred_file(ddf, ooo, name=params.model_id)
+
+		if params.stop_early:
+			early_stopping(test_loss, model)
+			if early_stopping.early_stop:
+				print('Early stopping')
+				break 
+
 
 
 	if params.save_model : 
@@ -145,7 +153,8 @@ if __name__ == '__main__':
 						help='whether to save the preditions')
 	parser.add_argument('--save_model', action="store_true", 
 						help='whether to save the model')
-	
+	parser.add_argument('--stop_early', action="store_true", 
+						help='whether to use early stopping')
 
 
 	params,_ = parser.parse_known_args()
