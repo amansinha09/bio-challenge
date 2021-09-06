@@ -2,10 +2,10 @@
 
 source ~/pyt/bin/activate
 
-python ~/bio-challenge/task3/src/run.py --device cuda \
-										--save ~/bio-challenge/task3/.model/  \
-										--model trial_4 \
-										--epoch 10
+python ~/bio-challenge/src/run.py --device cuda \
+					--save_dir ~/bio-challenge/.model/ --save_preds --save_model \
+					--model trial_7 \
+					--epoch 50 --bidir
 
 
 # For evaluating prediction by competition script
