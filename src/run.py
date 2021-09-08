@@ -88,7 +88,7 @@ def main(params):
 
 		eloss.append(tr_loss)
 
-		if e+1 % params.test_every == 0:
+		if e % params.test_every == 0:
 			test_loss, test_steps = 0,0
 			outputs = []
 			model.eval()

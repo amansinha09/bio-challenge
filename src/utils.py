@@ -1,8 +1,18 @@
 import os
+import sys
 import pathlib
+import pickle
+import argparse
+from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
+
+import torch
+#from torch.utils.data import Dataset, DataLoader
+
+from data import *
+from model import *
 
 
 
@@ -11,35 +21,36 @@ def create_pred_file(ddf, output, name, save_dir):
 
 	spans = []
 	for t in output:
-	    span = []
-	    start,end = -1,-1
-	    for i,tt in enumerate(t):
-	        if start == -1 and tt == 1:
-	            start,end = i,i
-	        if start != -1:
-	            if tt == 1:
-	                end +=1
-	            else:
-	                span.append((start,end))
-	                start, end = -1,-1
-	    spans.append(span)
+		span = []
+		start,end = -1,-1
+		for i,tt in enumerate(t):
+			if start == -1 and tt == 1:
+				start,end = i,i
+			if start != -1:
+				if tt == 1:
+					end +=1
+				else:
+					span.append((start,end))
+					start, end = -1,-1
+		spans.append(span)
 
 	rest_columens = []
 	for i,sp in enumerate(spans):
-	    #print(i,sp)
-	    if len(sp) == 0:
-	        k =('-','-','-','-')    
-	    else:
-	        # one span detected else first*
-	        if len(sp) >= 1:
-	            s = ddf.iloc[i]['text']
-	            wrd = s[sp[0][0]:sp[0][1]]
-	            k = (*(sp[0]),wrd, wrd.lower())
-	    rest_columens.append(k)
-	    
+		#print(i,sp)
+		if len(sp) == 0:
+			k =('-','-','-','-')    
+		else:
+			# one span detected else first*
+			if len(sp) >= 1:
+				s = ddf.iloc[i]['text']
+				wrd = s[sp[0][0]:sp[0][1]]
+				k = (*(sp[0]),wrd, wrd.lower())
+		rest_columens.append(k)
+		
 	predans = pd.DataFrame(rest_columens, columns=['start', 'end', 'span', 'drug'])      
 	pred = pd.concat([predques.reset_index(drop=True), predans.reset_index(drop=True)], axis = 1, )
 	pred.to_csv(f'{save_dir}/pred_{name}.csv', sep='\t')
+	print('predictions saved !!')
 
 
 class EarlyStopping:
@@ -87,3 +98,67 @@ class EarlyStopping:
 			print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
 		torch.save(model.state_dict(), self.save_path)
 		self.val_loss_min = val_loss
+
+
+
+def testing(data_loc, model_loc):
+
+	parser = argparse.ArgumentParser(description="Running ner...")
+
+	params,_ = parser.parse_known_args()
+	params.__dict__ = pickle.load(open("/home/amansinha/bio-challenge/.logs/params.pkl", "rb"))
+	params.device = torch.device('cpu')
+	params.bidir = True
+	# load data
+	df = pd.read_csv(data_loc, sep='\t')
+	data_params = {'batch_size': params.bs,
+				  'shuffle': False,
+				  'num_workers': 2}
+
+	dev_set = biodata(df, name='dev')
+	testloader = DataLoader(dev_set, **data_params)
+
+	# load model
+	model = charner(params).to(device=params.device)
+	model.load_state_dict(torch.load(model_loc,map_location=params.device))
+	loss_function = torch.nn.BCEWithLogitsLoss() #torch.nn.CrossEntropyLoss()
+	
+	# run model
+	# save result
+	outputs = []
+	test_loss, test_steps = 0,0
+	model.eval()
+	with torch.no_grad():
+		for _, data in tqdm(enumerate(testloader)):
+			
+			ids = data['ids'].to(params.device, dtype=torch.long)
+			tar = data['targets'].to(params.device)
+			d_output = model(ids).squeeze(-1)
+			outputs.append(d_output.cpu().detach().numpy())
+			d_loss = loss_function(d_output, tar)
+			test_loss += d_loss.item()
+			test_steps += 1
+
+	ooo = torch.from_numpy(np.vstack(outputs)>1).float()
+	create_pred_file(df, ooo, name=params.model_id + f'_{e}', save_dir=params.save_dir)
+	print('Prediction saved!!')
+
+
+
+
+if __name__ == '__main__':
+
+
+	if len(sys.argv) != 3:
+		log.error("Invalid input parameters. Format: \
+				  \n python utils.py [data_loc] [model_loc]")
+		sys.exit(0)
+
+
+	[_, data_loc, model_loc] = sys.argv
+
+	testing(data_loc, model_loc)
+
+
+
+

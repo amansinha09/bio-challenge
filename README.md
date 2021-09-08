@@ -13,8 +13,18 @@ Track 3: [Automatic extraction of medication names in tweets](https://biocreativ
 - [x] add gpu running feature
 - [x] Put it on grid
 - [x] Add inference code
+- [x] Add testing code
 - [ ] Run initial baseline char-rnn - only biotrainset
+- [x] Birnn- attention-char
 - [ ] Create word-rnn model 
+- [ ] Custom loss w/ best model 
+- [ ] Rnn- word
+- [ ] Bi-rnn -word
+- [ ] Bi-rnn attention -word
+- [ ] Crf
+- [ ] Custom loss w/ best model 
+- [ ] Bert 
+- [ ] scibert
 - [ ] Use different/custom losses
 - [ ] Think augmenation
 - [ ] Add requirements.txt
