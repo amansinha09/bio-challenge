@@ -1,6 +1,7 @@
 import os
 import sys
 import pathlib
+import logging as log
 import pickle
 import argparse
 from tqdm import tqdm
@@ -101,13 +102,13 @@ class EarlyStopping:
 
 
 
-def testing(data_loc, model_loc):
+def testing(param_loc, data_loc, model_loc):
 
 	parser = argparse.ArgumentParser(description="Running ner...")
 
 	params,_ = parser.parse_known_args()
-	params.__dict__ = pickle.load(open("/home/amansinha/bio-challenge/.logs/params.pkl", "rb"))
-	params.device = torch.device('cpu')
+	params.__dict__ = pickle.load(open(param_loc, "rb"))
+	#params.device = torch.device('cpu')
 	params.bidir = True
 	# load data
 	df = pd.read_csv(data_loc, sep='\t')
@@ -140,7 +141,7 @@ def testing(data_loc, model_loc):
 			test_steps += 1
 
 	ooo = torch.from_numpy(np.vstack(outputs)>1).float()
-	create_pred_file(df, ooo, name=params.model_id + f'_{e}', save_dir=params.save_dir)
+	create_pred_file(df, ooo, name=params.model_id, save_dir=params.save_dir)
 	print('Prediction saved!!')
 
 
@@ -149,15 +150,15 @@ def testing(data_loc, model_loc):
 if __name__ == '__main__':
 
 
-	if len(sys.argv) != 3:
+	if len(sys.argv) != 4:
 		log.error("Invalid input parameters. Format: \
-				  \n python utils.py [data_loc] [model_loc]")
+				  \n python utils.py [param_loc] [data_loc] [model_loc]")
 		sys.exit(0)
 
 
-	[_, data_loc, model_loc] = sys.argv
+	[_, param_loc, data_loc, model_loc] = sys.argv
 
-	testing(data_loc, model_loc)
+	testing(param_loc, data_loc, model_loc)
 
 
 

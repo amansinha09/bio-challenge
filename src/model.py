@@ -16,6 +16,7 @@ class charner(torch.nn.Module):
         self.num_layer = params.nl
         self.bidir = params.bidir
         self.do_attn = params.do_attn
+        self.natth = params.natth
         self.bs = params.bs
         self.inplen = params.inplen
         self.inpsize = params.inpsize
@@ -26,9 +27,9 @@ class charner(torch.nn.Module):
         self.rnn = nn.GRU(params.inpsize, params.hs, \
                           num_layers=self.num_layer, batch_first=True, \
                           bidirectional = self.bidir)
-        self.num_atth = params.num_atth
+        #self.num_atth = params.num_atth
         self.attn_dim = 2*self.hiddensize if self.bidir else 1*self.hiddensize
-        self.multihead_attn = nn.MultiheadAttention(self.attn_dim, num_heads=1,dropout=0.3, batch_first=True)
+        self.multihead_attn = nn.MultiheadAttention(self.attn_dim, num_heads=self.natth, batch_first=True)
         
         
         self.fc = torch.nn.Linear(self.bd * self.hiddensize, 1)
