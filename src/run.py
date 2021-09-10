@@ -1,5 +1,6 @@
 import os
 import time
+import pickle
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -16,33 +17,36 @@ from utils import *
 
 def main(params):
 
+	with open(f'./.logs/params_{params.model_id}.pkl','wb') as fp:
+		pickle.dump(params.__dict__, fp)
+	#return
 	# Load dataset
-	train_df = pd.read_csv('~/bio-challenge/data/BioCreative_TrainTask3.0.tsv', sep='\t')
+	train_df1 = pd.read_csv('~/bio-challenge/data/BioCreative_TrainTask3.0.tsv', sep='\t')
 	dev_df = pd.read_csv('~/bio-challenge/data/BioCreative_ValTask3.tsv', sep='\t')
 
 	train_df = pd.read_csv('~/bio-challenge/data/SMM4H18_train_modified.csv', sep='\t')
-	train_df.head()
+	#train_df.head()
 
 	# positive samples
 	tpdf = train_df.loc[train_df['start'] != '-']
 	tndf = train_df.loc[train_df['start'] == '-']
-	dpdf = dev_df.loc[dev_df['start'] != '-']
-	dndf = dev_df.loc[dev_df['start'] == '-']
+	#dpdf = dev_df.loc[dev_df['start'] != '-']
+	#dndf = dev_df.loc[dev_df['start'] == '-']
 
 	# traindf - subsampled tdf
-	tdf = pd.concat([tpdf,tndf])
+	tdf = pd.concat([tpdf,tndf])#, train_df1])
 	tdf = tdf.sample(frac=1)
 	# devdf - subsampled ddf
-	ddf = pd.concat([dpdf,dndf.iloc[:396]])
-	ddf = ddf.sample(frac=1)
-	ddf.to_csv(f'~/bio-challenge/ref/ddf_{params.model_id}.csv', sep='\t')
+	#ddf = pd.concat([dpdf,dndf])
+	#ddf = ddf.sample(frac=1)
+	#dpdf.to_csv(f'~/bio-challenge/ref/dpdf.csv', sep='\t')
 
 	print(f"Number of train samples: {len(tdf)}")
-	print(f"Number of dev samples: {len(ddf)}")
+	print(f"Number of dev samples: {len(dev_df)}")
 
 	# load dataloader
 	train_set = biodata(tdf, name='train')
-	dev_set = biodata(ddf, vocab=train_set.vocab, name='dev')
+	dev_set = biodata(dev_df, vocab=train_set.vocab, name='dev')
 
 	train_params = {'batch_size': params.bs,
 			   'shuffle':True,
@@ -108,7 +112,7 @@ def main(params):
 				
 			if params.save_preds or (e == EPOCHS-1):
 				ooo = torch.from_numpy(np.vstack(outputs)>1).float()
-				create_pred_file(ddf, ooo, name=params.model_id + f'_{e}', save_dir=params.save_dir)
+				create_pred_file(dpdf, ooo, name=params.model_id + f'_{e}', save_dir='~/bio-challenge/res/')
 				print(f'{e}th epoch prediction saved!!')
 
 		if params.stop_early:
@@ -139,6 +143,10 @@ if __name__ == '__main__':
 						help='Number of layers')
 	parser.add_argument('--bidir', default=False, action="store_true",
 					   help='bi-directional')
+	parser.add_argument('--do_attn', default=False, action="store_true",
+					help = 'apply attention')
+	parser.add_argument('--natth', default=1, type=int,
+					help='Number of attention heads')
 	parser.add_argument('--inplen', default=50,
 					   help='sequence/sentence length')
 	parser.add_argument('--inpsize', default=768,
