@@ -17,23 +17,33 @@ from model import *
 
 
 
-def create_pred_file(ddf, output, name, save_dir):
+def create_pred_file(ddf, output, sps, name, save_dir, level = 'char'):
+	# added spans argument : sps
 	predques = ddf.iloc[:, 0:4].copy()
 
 	spans = []
-	for t in output:
-		span = []
-		start,end = -1,-1
-		for i,tt in enumerate(t):
-			if start == -1 and tt == 1:
-				start,end = i,i
-			if start != -1:
-				if tt == 1:
-					end +=1
-				else:
-					span.append((start,end))
-					start, end = -1,-1
-		spans.append(span)
+	if level == 'char':
+		for t in output:
+			span = []
+			start,end = -1,-1
+			for i,tt in enumerate(t):
+				if start == -1 and tt == 1:
+					start,end = i,i
+				if start != -1:
+					if tt == 1:
+						end +=1
+					else:
+						span.append((start,end))
+						start, end = -1,-1
+			spans.append(span)
+	else:
+		# level ==  'word'
+		# reformat spans
+		sps = [[interval(s) for s in sl] for sl in list_of_spans]
+		for s,l in zip(sps, output):
+			assert(len(s) == len(l))
+			a,b = recreate(s[l.astype(bool)])
+			spans.append((a,b))
 
 	rest_columens = []
 	for i,sp in enumerate(spans):
@@ -144,7 +154,26 @@ def testing(param_loc, data_loc, model_loc):
 	create_pred_file(df, ooo, name=params.model_id, save_dir=params.save_dir)
 	print('Prediction saved!!')
 
+def recreate(ss:list):
+	if len(ss) == 1:
+		nl = [a for a in ss[0].__interval__()]
+	elif len(ss)>1:
+		nl = [ a for s in ss for a in s.__interval__()]
+	else:
+		return ('-','-')
+	return (min(nl), max(nl))
 
+class interval:
+	def __init__(self, start, end):
+		self.s = start
+		self.e = end
+	
+	def __print__(self):
+		print(self.s, self.e)
+	
+	def __show__(self):
+		return self.s, self.e
+		
 
 
 if __name__ == '__main__':
