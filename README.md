@@ -17,10 +17,10 @@ Track 3: [Automatic extraction of medication names in tweets](https://biocreativ
 - [x] Run initial baseline char-rnn - only biotrainset
 - [x] Birnn- attention-char
 - [x] Create word-rnn model  
-- [ ] Testing word model working
-- [ ] Rnn- word
-- [ ] Bi-rnn -word
-- [ ] Bi-rnn attention -word
+- [x] Testing word model working
+- [x] Rnn- word
+- [x] Bi-rnn -word
+- [x] Bi-rnn attention -word
 - [ ] Crf
 - [ ] Custom loss w/ best char model
 - [ ] Custom loss w/ best word model 

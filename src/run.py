@@ -94,7 +94,7 @@ def main(params):
 			tar = data['targets'].to(params.device)
 			sp = data['spans'].to(params.device)
 			output = model(ids).squeeze(-1)
-			print(output.shape, output[0], sp[0])
+			#print(output.shape, output[0], sp[0])
 			loss = loss_function(output, tar)
 			tr_loss += loss.item()
 			tr_steps += 1
@@ -124,7 +124,7 @@ def main(params):
 					dev_loss += d_loss.item()
 					dev_steps += 1
 
-				print(f'------- Dev loss after {e+1}/{EPOCHS}: {dev_loss/ dev_steps}')
+				print(f'\n------- Dev loss after {e+1}/{EPOCHS}: {dev_loss/ dev_steps}')
 				writer.add_scalar('Average dev loss ', dev_loss/ dev_steps, all_steps)
 				
 			#if params.save_preds or (e == EPOCHS-1):
@@ -139,7 +139,7 @@ def main(params):
 				break 
 
 	################ Testing ################
-	outputs = []
+	outputs, sps = [], []
 	test_loss, test_steps = 0,0
 	model.eval()
 	with torch.no_grad():
@@ -149,15 +149,17 @@ def main(params):
 			tar = data['targets'].to(params.device)
 			sp = data['spans'].to(params.device)
 			d_output = model(ids).squeeze(-1)
+			sps.append(sp.cpu().detach().numpy())
 			outputs.append(d_output.cpu().detach().numpy())
 			d_loss = loss_function(d_output, tar)
 			test_loss += d_loss.item()
 			test_steps += 1
 
-	print(f'------- Test loss : {test_loss/ test_steps}')
+	print(f'\n------- Test loss : {test_loss/ test_steps}')
 	if params.save_preds:
+		sps = np.asarray(sps); sps = np.vstack(sps)
 		ooo = torch.from_numpy(np.vstack(outputs)>1).float()
-		create_pred_file(test_df, ooo, name=params.model_id, save_dir=params.save_dir)
+		create_pred_file(test_df, ooo,np.asarray(sps), name=params.model_id, save_dir=params.save_dir, level=params.level)
 		print(f'Test prediction saved!!')
 
 
@@ -176,7 +178,7 @@ if __name__ == '__main__':
 						help='Hidden layer size')
 	parser.add_argument('--epochs', default=1, type=int, 
 						help='Number of epochs')
-	parser.add_argument('--bs', default=32, 
+	parser.add_argument('--bs', default=32, type=int,
 						help='batch size')
 	parser.add_argument('--nl', default=2, type=int,
 						help='Number of layers')

@@ -39,28 +39,46 @@ def create_pred_file(ddf, output, sps, name, save_dir, level = 'char'):
 	else:
 		# level ==  'word'
 		# reformat spans
-		sps = [[interval(s) for s in sl] for sl in list_of_spans]
+		output = output.numpy().astype(int)
+		#print(sps.shape, sps[0])
+		sps = [np.asarray([interval(s) for s in sl]) for sl in sps]
 		for s,l in zip(sps, output):
+			span= []
 			assert(len(s) == len(l))
+			#print(l,type(l), l.dtype);print('indexes:',np.asarray(s)[l.astype(bool)])
 			a,b = recreate(s[l.astype(bool)])
-			spans.append((a,b))
-
+			if a != '-':
+				span.append([a,b])
+			else:
+				span.append([])
+			spans.append(span)
 	rest_columens = []
 	for i,sp in enumerate(spans):
 		#print(i,sp)
-		if len(sp) == 0:
+		if len(sp) == 0 or len(sp[0])==0:
 			k =('-','-','-','-')    
 		else:
 			# one span detected else first*
 			if len(sp) >= 1:
 				s = ddf.iloc[i]['text']
+				#print(sp)
 				wrd = s[sp[0][0]:sp[0][1]]
-				k = (*(sp[0]),wrd, wrd.lower())
+				k = (sp[0][0],sp[0][1],wrd, wrd.lower())
 		rest_columens.append(k)
 		
 	predans = pd.DataFrame(rest_columens, columns=['start', 'end', 'span', 'drug'])      
-	pred = pd.concat([predques.reset_index(drop=True), predans.reset_index(drop=True)], axis = 1, )
-	pred.to_csv(f'{save_dir}/pred_{name}.csv', sep='\t')
+	pred = pd.concat([predques.reset_index(drop=True), predans.reset_index(drop=True)], axis = 1)
+	# annotation coherence post-processing
+	for a, group in pred.groupby('tweet_id'):
+		if len(group['tweet_id']>1):
+			to_copy = -1
+			for ii,s in zip(group.index, group['start']):
+				if s != '-':
+					to_copy = ii; break
+			if to_copy != -1:
+				pred.loc[group.index,:] = pred.loc[to_copy].values
+	print("annotation cohered!")
+	pred.to_csv(f'{save_dir}/pred_{name}.tsv', sep='\t', index=False)
 	print('predictions saved !!')
 
 
@@ -156,17 +174,17 @@ def testing(param_loc, data_loc, model_loc):
 
 def recreate(ss:list):
 	if len(ss) == 1:
-		nl = [a for a in ss[0].__interval__()]
+		nl = [a for a in ss[0].__show__()]
 	elif len(ss)>1:
-		nl = [ a for s in ss for a in s.__interval__()]
+		nl = [ a for s in ss for a in s.__show__()]
 	else:
 		return ('-','-')
 	return (min(nl), max(nl))
 
 class interval:
-	def __init__(self, start, end):
-		self.s = start
-		self.e = end
+	def __init__(self, t:list):
+		self.s = t[0]
+		self.e = t[1]
 	
 	def __print__(self):
 		print(self.s, self.e)
