@@ -18,7 +18,7 @@ from utils import *
 
 def main(params):
 
-	with open(f'./.logs/params_{params.model_id}.pkl','wb') as fp:
+	with open(f'/home/amsinha/bio-challenge/.logs/params_{params.model_id}.pkl','wb') as fp:
 		pickle.dump(params.__dict__, fp)
 	#return
 	# Load dataset
@@ -133,7 +133,7 @@ def main(params):
 			#	print(f'{e}th epoch prediction saved!!')
 
 		if params.stop_early:
-			early_stopping(test_loss, model)
+			early_stopping(dev_loss, model)
 			if early_stopping.early_stop:
 				print('Early stopping')
 				break 
