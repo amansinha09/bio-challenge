@@ -5,6 +5,9 @@ import numpy as np
 
 import torch
 from torch.utils.data import Dataset, DataLoader
+from transformers import AutoTokenizer, AutoModelForMaskedLM
+
+from encoder import BertEncoder
 
 
 class biodata(Dataset):
@@ -74,7 +77,7 @@ class biodata(Dataset):
 
 
 class biodata2(Dataset):
-    def __init__(self, df, vocab=None, max_len=None, name='train', level='char'):
+    def __init__(self, df, vocab=None, max_len=None, name='train', level='char', use_bert=False):
         self.len = len(df)
         self.data = df
         self.level = level
@@ -87,6 +90,12 @@ class biodata2(Dataset):
         else:
             self.max_len = max_len
         #print(f'name: {name}, max_len : {self.max_len}')
+        self.max_len = 100
+        self.use_bert = use_bert
+        self.tokenizer = AutoTokenizer.from_pretrained("cardiffnlp/twitter-roberta-base")
+        self.bertmodel = AutoModelForMaskedLM.from_pretrained("cardiffnlp/twitter-roberta-base")
+        self.encoder = BertEncoder(self.bertmodel, self.tokenizer)
+        
         self.vocab = vocab
         self.vdict = None
         self.create_vocab(vocab)
@@ -97,9 +106,19 @@ class biodata2(Dataset):
         start, end = self.data['start'].iloc[index], self.data['end'].iloc[index]
         start = 0 if start == '-' else int(start)
         end = 0 if end == '-' else int(end)
-        return {'ids' : torch.tensor(self.transform_input(sen, pad=True), dtype=torch.long),
-               'targets' : torch.tensor(self.make_label(sen, start, end), dtype=torch.float64),
-               'spans': torch.tensor(self.make_span(sen,pad=True), dtype=torch.long)}
+        if not self.use_bert:
+            return {'ids' : torch.tensor(self.transform_input(sen, pad=True), dtype=torch.long),
+                   'targets' : torch.tensor(self.make_label(sen, start, end), dtype=torch.float64),
+                   'spans': torch.tensor(self.make_span(sen,pad=True), dtype=torch.long)}
+                   #'attn_mask': torch.ones(self.max_len)
+        else:
+
+            tok_ids, attn_mask, spans = self.encoder.encode(seq=sen.split(' '), pad=self.max_len)
+            return {'ids': tok_ids,
+                    'spans': spans,
+                    'attn_mask': attn_mask,
+                    'targets': torch.tensor(self.make_label(sen, start, end), dtype=torch.float64)}
+
     
     def transform_input(self, sentence, pad=False):
         es = []

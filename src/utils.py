@@ -47,7 +47,7 @@ def create_pred_file(ddf, output, sps, name, save_dir, level = 'char'):
 			assert(len(s) == len(l))
 			#print(l,type(l), l.dtype);print('indexes:',np.asarray(s)[l.astype(bool)])
 			a,b = recreate(s[l.astype(bool)])
-			if a != '-':
+			if a != '-' and a != -1:
 				span.append([a,b])
 			else:
 				span.append([])

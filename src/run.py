@@ -18,8 +18,9 @@ from utils import *
 
 def main(params):
 
-	with open(f'/home/amsinha/bio-challenge/.logs/params_{params.model_id}.pkl','wb') as fp:
-		pickle.dump(params.__dict__, fp)
+	if params.save_params:
+		with open(f'/home/amsinha/bio-challenge/.logs/params_{params.model_id}.pkl','wb') as fp:
+			pickle.dump(params.__dict__, fp)
 	#return
 	# Load dataset
 	train_df0 = pd.read_csv('~/bio-challenge/data/BioCreative_TrainTask3.0.tsv', sep='\t')
@@ -49,9 +50,9 @@ def main(params):
 	print(f"Number of dev samples: {len(dev_df)}")
 
 	# load dataloader
-	train_set = biodata2(train_df, name='train', level=params.level)
-	dev_set = biodata2(dev_df, vocab=train_set.vocab, name='dev', max_len = train_set.max_len, level=params.level)
-	test_set = biodata2(test_df, vocab=train_set.vocab, name='test', max_len= train_set.max_len, level=params.level)
+	train_set = biodata2(train_df, name='train', level=params.level, use_bert=params.use_bert)
+	dev_set = biodata2(dev_df, vocab=train_set.vocab, name='dev', max_len = train_set.max_len, level=params.level, use_bert=params.use_bert)
+	test_set = biodata2(test_df, vocab=train_set.vocab, name='test', max_len= train_set.max_len, level=params.level, use_bert=params.use_bert)
 
 	params.vocabsize = len(train_set.vocab)
 	print(len(train_set.vocab))
@@ -64,7 +65,7 @@ def main(params):
 				  'num_workers': 2}
 	test_params = dev_params
 
-	trainloader = DataLoader(train_set, **train_params)
+	trainloader = DataLoader(train_set, **train_params, drop_last=True)
 	devloader = DataLoader(dev_set, **dev_params)
 	testloader = DataLoader(test_set, **test_params)
 
@@ -72,7 +73,8 @@ def main(params):
 	#	print(data['ids'].shape)
 	#return
 
-	model = charner(params).to(device=params.device)
+	#model = charner(params).to(device=params.device)
+	model = bertner(params).to(device=params.device)
 
 	loss_function = torch.nn.BCEWithLogitsLoss() #torch.nn.CrossEntropyLoss()
 	optimizer = torch.optim.Adam(params =model.parameters(), lr=params.lr)
@@ -93,7 +95,10 @@ def main(params):
 			ids = data['ids'].to(params.device, dtype=torch.long)
 			tar = data['targets'].to(params.device)
 			sp = data['spans'].to(params.device)
-			output = model(ids).squeeze(-1)
+			attm = data['attn_mask'].to(params.device) 
+			inp = (ids, attm, sp) if params.use_bert else ids
+			output = model(inp).squeeze(-1)#;continue
+			#output = model(ids).squeeze(-1)
 			#print(output.shape, output[0], sp[0])
 			loss = loss_function(output, tar)
 			tr_loss += loss.item()
@@ -118,7 +123,10 @@ def main(params):
 					ids = data['ids'].to(params.device, dtype=torch.long)
 					tar = data['targets'].to(params.device)
 					sp = data['spans'].to(params.device)
-					d_output = model(ids).squeeze(-1)
+					attm = data['attn_mask'].to(params.device)
+					inp = (ids, attm, sp) if params.use_bert else ids
+					d_output = model(inp).squeeze(-1)
+					#d_output = model(ids).squeeze(-1)
 					outputs.append(d_output.cpu().detach().numpy())
 					d_loss = loss_function(d_output, tar)
 					dev_loss += d_loss.item()
@@ -148,7 +156,10 @@ def main(params):
 			ids = data['ids'].to(params.device, dtype=torch.long)
 			tar = data['targets'].to(params.device)
 			sp = data['spans'].to(params.device)
-			d_output = model(ids).squeeze(-1)
+			attm = data['attn_mask'].to(params.device)
+			inp = (ids, attm, sp) if params.use_bert else ids
+			d_output = model(inp).squeeze(-1)
+			#d_output = model(ids).squeeze(-1)
 			sps.append(sp.cpu().detach().numpy())
 			outputs.append(d_output.cpu().detach().numpy())
 			d_loss = loss_function(d_output, tar)
@@ -210,7 +221,11 @@ if __name__ == '__main__':
 						help='whether to save the model')
 	parser.add_argument('--stop_early', action="store_true", 
 						help='whether to use early stopping')
-
+	parser.add_argument('--save_params', action="store_true", 
+						help='whether to save model params')
+	parser.add_argument('--use_bert', action="store_true", 
+						help='whether to use bert encoder')
+	
 
 	params,_ = parser.parse_known_args()
 

@@ -167,7 +167,72 @@ def score_task(pred_file, gold_file, out_file):
     out.write("Task3strictR:%.3f\n" % s_rec)
     out.flush()
 
+def evaluate():
+    """
+        Runs the evaluation function
+        Expects the file ref/BioCreative_GoldStandardTask3.tsv as gold standard
+        Expect one file in res/, does not check the name of the file but it should have the format expected.
+        Write logs in BioCreative_Eval.log
+    """
+    # load logger
+    #LOG_FILE = '/Users/dweissen/tmp/BioCreative_Eval.log'
+    LOG_FILE = '/tmp/BioCreative20Task3_Eval.log'
+    log.basicConfig(level=log.DEBUG,
+                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    handlers=[log.StreamHandler(sys.stdout), log.FileHandler(LOG_FILE)])
+    # as per the metadata file, input and output directories are the arguments
+    if len(sys.argv) != 3:
+        log.error("Invalid input parameters. Format:\
+                  \n python evaluation.py [input_dir] [output_dir]")
+        sys.exit(0)
+    #[_, input_dir, output_dir] = sys.argv
+    [_, input_file, output_file] = sys.argv ; output_dir = './res/'
+    '''
+    # get files in prediction zip file
+    pred_dir = os.path.join(input_dir, 'res')
+    pred_files = [x for x in os.listdir(pred_dir) if not os.path.isdir(os.path.join(pred_dir, x))]
+    pred_files = [x for x in pred_files if x[0] not in ["_", "."]]
+    if not pred_files:
+        log.error("No valid files found in archive. \
+                  \nMake sure file names do not start with . or _ characters")
+        sys.exit(0)
+    if len(pred_files) > 1:
+        log.error("More than one valid files found in archive. \
+                  \nMake sure only one valid file is available.")
+        sys.exit(0)
+    # Get path to the prediction file
+    pred_file = os.path.join(pred_dir, pred_files[0])
 
+    # Get path to the gold standard annotation file and score file
+    if path.exists(os.path.join(input_dir, 'ref/BioCreative_ValTask3.tsv')):
+        gold_file = os.path.join(input_dir, 'ref/BioCreative_ValTask3.tsv')
+    elif path.exists(os.path.join(input_dir, 'ref/ddf.csv')):
+        gold_file = os.path.join(input_dir, 'ref/ddf.csv')
+    else:
+        if path.exists(os.path.join(input_dir, 'ref/BioCreative_TestTask3.tsv')):
+            gold_file = os.path.join(input_dir, 'ref/BioCreative_TestTask3.tsv')
+        else:
+            log.error("Could not find the goldstandard file in the ref directory.")
+            sys.exit(0)
+    '''
+    pred_file, gold_file = output_file, input_file
+
+    log.info("Pred file:%s, Gold file:%s", pred_file, gold_file)
+    out_file = os.path.join(output_dir, 'scores.txt')
+    log.info("Output file:%s", out_file)
+
+    log.info("Start scoring")
+    score_task(pred_file, gold_file, out_file)
+
+
+    log.info("Finished scoring")
+
+if __name__ == '__main__':
+    evaluate()
+
+
+
+'''
 def evaluate():
     """
         Runs the evaluation function
@@ -224,3 +289,4 @@ def evaluate():
 
 if __name__ == '__main__':
     evaluate()
+'''
