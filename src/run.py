@@ -24,8 +24,8 @@ def main(params):
 	#return
 	# Load dataset
 	train_df0 = pd.read_csv('~/bio-challenge/data/BioCreative_TrainTask3.0.tsv', sep='\t')
-	test_df = pd.read_csv('~/bio-challenge/data/BioCreative_ValTask3.tsv', sep='\t')
-
+	#test_df = pd.read_csv('~/bio-challenge/data/BioCreative_ValTask3.tsv', sep='\t')
+	test_df = pd.read_csv('~/bio-challenge/data/BioCreative_TEST_Task3_PARTICIPANTS.tsv',sep='\t')
 	train_df1 = pd.read_csv('~/bio-challenge/data/SMM4H18_train_modified.csv', sep='\t')
 	train_df1 = train_df1.drop(columns=['Unnamed: 0'], axis=1)
 	#train_df.head()
@@ -82,7 +82,7 @@ def main(params):
 	EPOCHS = params.epochs
 	all_steps = 0
 
-	writer = SummaryWriter(f'{params.save_dir}/ner_baseline_{params.model_id}')
+	writer = SummaryWriter(f'{params.save_dir}/ner_{params.model_id}')
 	early_stopping = EarlyStopping(patience=5, verbose=True, save_path=f'{params.save_dir}/ner_{params.model_id}.pt')
 
 	eloss = []

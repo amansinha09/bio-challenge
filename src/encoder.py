@@ -109,9 +109,9 @@ class BertEncoder(Encoder):
 			indices = torch.arange(n_bpe.size(0), device=self.model.device).repeat_interleave(n_bpe) # indices for index_add
 			#print(indices.shape, span.shape, len(indices), len(output[att_mask]))
 			#print(indices, att_mask)
-			assert(len(indices) == len(output[att_mask]))
+			k = min(len(indices),len(output[att_mask]))
 			average_vectors = torch.zeros(n_bpe.size(0), output.size(2), device=self.model.device) # starts from zeros vector
-			average_vectors.index_add_(0, indices, output[att_mask].to(device=self.model.device)) # sum of bpe based in indices
+			average_vectors.index_add_(0, indices[:k], output[att_mask].to(device=self.model.device)) # sum of bpe based in indices
 			average_vectors.div_(n_bpe.view(n_bpe.size(0),1)) # divide by number of bpe
 
 			output_ = torch.zeros_like(output, device=self.model.device) # new output vector to match outputsize

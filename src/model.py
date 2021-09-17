@@ -5,7 +5,7 @@ import numpy as np
 
 import torch
 import torch.nn as nn
-from transformers import AutoTokenizer, AutoModelForMaskedLM
+from transformers import AutoTokenizer, AutoModel#, AutoModelForMaskedLM
 
 from encoder import BertEncoder
 
@@ -65,14 +65,14 @@ class bertner(torch.nn.Module):
         self.natth = params.natth
         self.bs = params.bs
         self.inplen = params.inplen
-        self.inpsize = 50265#params.inpsize
+        self.inpsize = params.inpsize
         self.vocabsize = params.vocabsize
         self.bd = 2 if self.bidir else 1
         """
         twitter-roberta : 50265 features
         """
         self.tokenizer = AutoTokenizer.from_pretrained("cardiffnlp/twitter-roberta-base")
-        self.bertmodel = AutoModelForMaskedLM.from_pretrained("cardiffnlp/twitter-roberta-base")
+        self.bertmodel = AutoModel.from_pretrained("cardiffnlp/twitter-roberta-base")
         self.encoder = BertEncoder(self.bertmodel, self.tokenizer)
         # keep batch first
         self.rnn = nn.GRU(self.inpsize, params.hs, \
@@ -92,7 +92,7 @@ class bertner(torch.nn.Module):
         self.h0 = torch.randn(self.bd * self.num_layer, 
                               inp[0].shape[0], self.hiddensize, device=self.device)
         bert_x = self.encoder(inp)
-        #print(bert_x)
+        #print(bert_x.shape)
         #bert_x = self.encoder(encoded_x)
 
         rnn_otpt, hn = self.rnn(bert_x.to(self.device), self.h0)

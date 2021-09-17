@@ -5,7 +5,7 @@ import numpy as np
 
 import torch
 from torch.utils.data import Dataset, DataLoader
-from transformers import AutoTokenizer, AutoModelForMaskedLM
+from transformers import AutoTokenizer, AutoModel
 
 from encoder import BertEncoder
 
@@ -92,8 +92,8 @@ class biodata2(Dataset):
         #print(f'name: {name}, max_len : {self.max_len}')
         self.max_len = 100
         self.use_bert = use_bert
-        self.tokenizer = AutoTokenizer.from_pretrained("cardiffnlp/twitter-roberta-base")
-        self.bertmodel = AutoModelForMaskedLM.from_pretrained("cardiffnlp/twitter-roberta-base")
+        self.bertmodel = AutoModel.from_pretrained("cardiffnlp/twitter-roberta-base")#; self.bertmodel.save_pretrained("cardiffnlp/twitter-roberta-base")
+        self.tokenizer = AutoTokenizer.from_pretrained("cardiffnlp/twitter-roberta-base")#; self.tokenizer.save_pretrained("cardiffnlp/twitter-roberta-base")
         self.encoder = BertEncoder(self.bertmodel, self.tokenizer)
         
         self.vocab = vocab
