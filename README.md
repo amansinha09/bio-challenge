@@ -22,12 +22,12 @@ Track 3: [Automatic extraction of medication names in tweets](https://biocreativ
 - [x] Bi-rnn -word
 - [x] Bi-rnn attention -word
 - [x] Bert /scibert ---> to be resolved 
-- [ ] resolved bert inference
-- [ ] word-char model
+- [x] resolved bert inference
+- [x] word-char model
 - [ ] Crf
 - [ ] Custom loss w/ best char model
 - [ ] Custom loss w/ best word model 
-- [] Use different/custom losses
+- [ ] Use different/custom losses
 - [ ] Think augmenation
 - [ ] Add requirements.txt
 
