@@ -6,6 +6,7 @@ from os import path
 import pandas as pd
 from pandas.core import series
 
+
 class Tweet(object):
     '''Class for storing tweet'''
     def __init__(self, twid, text=""):
@@ -32,26 +33,42 @@ def load_dataset(gfile):
     :return: a dictionary tweet_id => tweet object (with their list of expected annotations)
     """
     tw_int_map = {}
-    try:
-        df = pd.read_csv(gfile, sep='\t')
-    except:
-        df = pd.read_csv(gfile)
+    df = pd.read_csv(gfile, sep='\t')
     #def createTweets(tw:series, tw_int_map:dict):
     def createTweets(tw, tw_int_map):
+        existing_tweet = None
         #create the tweet or retrieve the tweet if the tweet contains multiple drugs
         if tw['tweet_id'] in tw_int_map:
             tweet = tw_int_map[tw['tweet_id']]
+            existing_tweet = True
         else:
             tweet = Tweet(tw['tweet_id'], tw['text'])
             tw_int_map[tw['tweet_id']] = tweet
+            existing_tweet = False
         #add the annotations if there are
         if tw['span']!='-':
             ann = Ann(tw['span'].strip(), tw['start'], tw['end'])
-            tweet.anns.append(ann)
+            #test ill case where a tweet is mentioned with no span and then in a duplicate line with a span
+            if existing_tweet:
+                assert len(tweet.anns)>0, "I found a mention of the tweet:[{}], where a span is annotated: [{}-{}], but a previous mention of the tweet did not have any span annotated, check the annotation coherence.".format(tw['tweet_id'], ann.start, ann.end)
+            #Chek if the annotation is not already in the map (duplicated lines with the same span annotated), if so just ignore the duplicated ones
+            exist = False
+            for existing_ann in tweet.anns:
+                if (existing_ann.start == ann.start and existing_ann.end == ann.end):
+                    log.warning("I found a duplicate annotation for the tweet:[{}], span:[{}-{}], I ignore it.".format(tw['tweet_id'], existing_ann.start, existing_ann.end))
+                    exist = True
+                    break
+            if not exist:
+                tweet.anns.append(ann)
+        else:
+            #test ill case where a tweet is mentioned with a span and then in a duplicate line without a span
+            if existing_tweet:
+                assert len(tweet.anns)==0, "I found a mention of the tweet:[{}] with no span annotated, whereas a previous mention of the tweet did have a span annotated:[{}-{}], check the annotation coherence.".format(tw['tweet_id'], tweet.anns[0].start, tweet.anns[0].end)
+                log.warning("I found a duplicate tweet:[{}], with no span annotated, I ignore it.".format(tw['tweet_id']))
     df.apply(lambda tw: createTweets(tw, tw_int_map), axis=1)
     num_anns = sum([len(x.anns) for _, x in tw_int_map.items()])
     #log.info("Loaded dataset %s tweets. %s annotations.", len(tw_int_map), num_anns)
-    return tw_int_map        
+    return tw_int_map
 
 
 def is_overlap_match(a, b):
@@ -125,6 +142,7 @@ def score_task(pred_file, gold_file, out_file):
     gold_ds = load_dataset(gold_file)
     # load prediction dataset
     pred_ds = load_dataset(pred_file)
+    
         
     #Sanity check that the tweets are the same and the the texts of the tweets are also the same
     assert len(gold_ds)==len(pred_ds), "The number of tweets loaded in the gold standard {} is not the same than the number of tweets loaded in the predictions {}".format(len(gold_ds), len(pred_ds))
@@ -148,7 +166,6 @@ def score_task(pred_file, gold_file, out_file):
     out.write("Task3strictP:%.3f\n" % s_prec)
     out.write("Task3strictR:%.3f\n" % s_rec)
     out.flush()
-
 
 def evaluate():
     """
@@ -213,3 +230,63 @@ def evaluate():
 if __name__ == '__main__':
     evaluate()
 
+
+
+'''
+def evaluate():
+    """
+        Runs the evaluation function
+        Expects the file ref/BioCreative_GoldStandardTask3.tsv as gold standard
+        Expect one file in res/, does not check the name of the file but it should have the format expected.
+        Write logs in BioCreative_Eval.log
+    """
+    # load logger
+    #LOG_FILE = '/Users/dweissen/tmp/BioCreative_Eval.log'
+    LOG_FILE = '/tmp/BioCreative20Task3_Eval.log'
+    log.basicConfig(level=log.DEBUG,
+                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    handlers=[log.StreamHandler(sys.stdout), log.FileHandler(LOG_FILE)])
+    # as per the metadata file, input and output directories are the arguments
+    if len(sys.argv) != 3:
+        log.error("Invalid input parameters. Format:\
+                  \n python evaluation.py [input_dir] [output_dir]")
+        sys.exit(0)
+    [_, input_dir, output_dir] = sys.argv
+
+    # get files in prediction zip file
+    pred_dir = os.path.join(input_dir, 'res')
+    pred_files = [x for x in os.listdir(pred_dir) if not os.path.isdir(os.path.join(pred_dir, x))]
+    pred_files = [x for x in pred_files if x[0] not in ["_", "."]]
+    if not pred_files:
+        log.error("No valid files found in archive. \
+                  \nMake sure file names do not start with . or _ characters")
+        sys.exit(0)
+    if len(pred_files) > 1:
+        log.error("More than one valid files found in archive. \
+                  \nMake sure only one valid file is available.")
+        sys.exit(0)
+    # Get path to the prediction file
+    pred_file = os.path.join(pred_dir, pred_files[0])
+
+    # Get path to the gold standard annotation file and score file
+    if path.exists(os.path.join(input_dir, 'ref/BioCreative_ValTask3.tsv')):
+        gold_file = os.path.join(input_dir, 'ref/BioCreative_ValTask3.tsv')
+    else:
+        if path.exists(os.path.join(input_dir, 'ref/BioCreative_TestTask3.tsv')):
+            gold_file = os.path.join(input_dir, 'ref/BioCreative_TestTask3.tsv')
+        else:
+            log.error("Could not find the goldstandard file in the ref directory.")
+            sys.exit(0)
+    log.info("Pred file:%s, Gold file:%s", pred_file, gold_file)
+    out_file = os.path.join(output_dir, 'scores.txt')
+    log.info("Output file:%s", out_file)
+
+    log.info("Start scoring")
+    score_task(pred_file, gold_file, out_file)
+
+
+    log.info("Finished scoring")
+
+if __name__ == '__main__':
+    evaluate()
+'''

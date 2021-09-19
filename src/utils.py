@@ -78,7 +78,7 @@ def create_pred_file(ddf, output, sps, name, save_dir, level = 'char'):
 			if to_copy != -1:
 				pred.loc[group.index,:] = pred.loc[to_copy].values
 	print("annotation cohered!")
-	pred.to_csv(f'{save_dir}/pred_{name}.tsv', sep='\t', index=False)
+	pred.to_csv(f'{save_dir}/pred_local_{name}.tsv', sep='\t', index=False)
 	print('predictions saved !!')
 
 
@@ -136,8 +136,9 @@ def testing(param_loc, data_loc, model_loc):
 
 	params,_ = parser.parse_known_args()
 	params.__dict__ = pickle.load(open(param_loc, "rb"))
-	#params.device = torch.device('cpu')
-	params.bidir = True
+	params.device = torch.device('cpu')
+	params.vocabsize = 82293
+	#params.bidir = True
 	# load data
 	df = pd.read_csv(data_loc, sep='\t')
 	data_params = {'batch_size': params.bs,
@@ -154,7 +155,7 @@ def testing(param_loc, data_loc, model_loc):
 	
 	# run model
 	# save result
-	outputs = []
+	outputs, sps = [], []
 	test_loss, test_steps = 0,0
 	model.eval()
 	with torch.no_grad():
@@ -162,14 +163,17 @@ def testing(param_loc, data_loc, model_loc):
 			
 			ids = data['ids'].to(params.device, dtype=torch.long)
 			tar = data['targets'].to(params.device)
+			sp = data['spans'].to(params.device)
 			d_output = model(ids).squeeze(-1)
 			outputs.append(d_output.cpu().detach().numpy())
+			sps.append(sp.cpu().detach().numpy())
 			d_loss = loss_function(d_output, tar)
 			test_loss += d_loss.item()
 			test_steps += 1
 
+	sps = np.asarray(sps); sps = np.vstack(sps)
 	ooo = torch.from_numpy(np.vstack(outputs)>1).float()
-	create_pred_file(df, ooo, name=params.model_id, save_dir=params.save_dir)
+	create_pred_file(df, ooo, sps, name=params.model_id, save_dir=params.save_dir)
 	print('Prediction saved!!')
 
 def recreate(ss:list):

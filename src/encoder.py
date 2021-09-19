@@ -80,7 +80,7 @@ class BertEncoder(Encoder):
 		return (tok_ids, att_mask, spans)
 
 
-	def forward(self, inputs, encoder_type='linear'):
+	def forward(self, inputs):
 		"""Run transformer model on inputs. Average bpes per token and remove cls and sep vectors"""
 
 		tok_ids, att_mask, span = inputs

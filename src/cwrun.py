@@ -50,12 +50,20 @@ def main(params):
 	print(f"Number of dev samples: {len(dev_df)}")
 
 	# load dataloader
-	train_set = biodata2(train_df, name='train', level=params.level, use_bert=params.use_bert)
-	dev_set = biodata2(dev_df, vocab=train_set.vocab, name='dev', max_len = train_set.max_len, level=params.level, use_bert=params.use_bert)
-	test_set = biodata2(test_df, vocab=train_set.vocab, name='test', max_len= train_set.max_len, level=params.level, use_bert=params.use_bert)
+	#train_set = biodata2(train_df, name='train', level=params.level, use_bert=params.use_bert)
+	#dev_set = biodata2(dev_df, vocab=train_set.vocab, name='dev', max_len = train_set.max_len, level=params.level, use_bert=params.use_bert)
+	#test_set = biodata2(test_df, vocab=train_set.vocab, name='test', max_len= train_set.max_len, level=params.level, use_bert=params.use_bert)
 
-	params.vocabsize = len(train_set.vocab)
-	print(len(train_set.vocab))
+	# wc model
+	train_set = biodata3(train_df, name='train')
+	dev_set = biodata3(dev_df, cvocab=train_set.cvocab, wvocab= train_set.wvocab, name='dev', cmax_len = train_set.cmax_len, wmax_len = train_set.wmax_len)
+	test_set = biodata3(test_df, cvocab=train_set.cvocab, wvocab= train_set.wvocab, name='test', cmax_len= train_set.cmax_len, wmax_len = train_set.wmax_len)
+
+
+	params.cvocabsize = len(train_set.cvocab)
+	params.wvocabsize = len(train_set.wvocab)
+	print('char vocab:', len(train_set.cvocab))
+	print('word vocab:', len(train_set.wvocab))
 
 	train_params = {'batch_size': params.bs,
 			   'shuffle':True,
@@ -70,11 +78,13 @@ def main(params):
 	testloader = DataLoader(test_set, **test_params)
 
 	#for _,data in enumerate(trainloader):
-	#	print(data['ids'].shape)
+	#	print(data['cids'].shape, data['wids'].shape)
+	#	break
 	#return
 
-	#model = charner(params).to(device=params.device)
-	model = bertner(params).to(device=params.device)
+	model = cwner(params).to(device=params.device)
+	#print(model)
+	#return
 
 	loss_function = torch.nn.BCEWithLogitsLoss() #torch.nn.CrossEntropyLoss()
 	optimizer = torch.optim.Adam(params =model.parameters(), lr=params.lr)
@@ -84,7 +94,7 @@ def main(params):
 
 	writer = SummaryWriter(f'{params.save_dir}/ner_{params.model_id}')
 	early_stopping = EarlyStopping(patience=5, verbose=True, save_path=f'{params.save_dir}/ner_{params.model_id}.pt')
-
+	print(params)
 	eloss = []
 	for e in range(EPOCHS):
 		tr_loss, tr_steps = 0,0
@@ -92,14 +102,16 @@ def main(params):
 		model.train()
 		for _, data in tqdm(enumerate(trainloader)):
 			optimizer.zero_grad()
-			ids = data['ids'].to(params.device, dtype=torch.long)
+			cids = data['cids'].to(params.device, dtype=torch.long)
+			wids = data['wids'].to(params.device, dtype=torch.long)
+			cmask = data['cmask'].to(params.device)
+			wmask = data['wmask'].to(params.device)
 			tar = data['targets'].to(params.device)
 			sp = data['spans'].to(params.device)
-			attm = data['attn_mask'].to(params.device) # for use_bert
-			inp = (ids, attm, sp) if params.use_bert else ids # for use_bert
-			output = model(inp).squeeze(-1)#;continue
-			#output = model(ids).squeeze(-1)
-			#print(output.shape, output[0], sp[0])
+
+			inp = (cids, wids, sp, cmask, wmask)
+			output = model(inp).squeeze(-1)
+			#return
 			loss = loss_function(output, tar)
 			tr_loss += loss.item()
 			tr_steps += 1
@@ -120,11 +132,14 @@ def main(params):
 			with torch.no_grad():
 				for _, data in tqdm(enumerate(devloader)):
 					
-					ids = data['ids'].to(params.device, dtype=torch.long)
+					cids = data['cids'].to(params.device, dtype=torch.long)
+					wids = data['wids'].to(params.device, dtype=torch.long)
+					cmask = data['cmask'].to(params.device)
+					wmask = data['wmask'].to(params.device)
 					tar = data['targets'].to(params.device)
 					sp = data['spans'].to(params.device)
-					attm = data['attn_mask'].to(params.device)
-					inp = (ids, attm, sp) if params.use_bert else ids
+
+					inp = (cids, wids, sp, cmask, wmask)
 					d_output = model(inp).squeeze(-1)
 					#d_output = model(ids).squeeze(-1)
 					outputs.append(d_output.cpu().detach().numpy())
@@ -153,11 +168,12 @@ def main(params):
 	with torch.no_grad():
 		for _, data in tqdm(enumerate(testloader)):
 			
-			ids = data['ids'].to(params.device, dtype=torch.long)
+			cids = data['cids'].to(params.device, dtype=torch.long)
+			wids = data['wids'].to(params.device, dtype=torch.long)
+			cmask = data['cmask'].to(params.device)
+			wmask = data['wmask'].to(params.device)
 			tar = data['targets'].to(params.device)
 			sp = data['spans'].to(params.device)
-			attm = data['attn_mask'].to(params.device)
-			inp = (ids, attm, sp) if params.use_bert else ids
 			d_output = model(inp).squeeze(-1)
 			#d_output = model(ids).squeeze(-1)
 			sps.append(sp.cpu().detach().numpy())
