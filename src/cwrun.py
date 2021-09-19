@@ -91,7 +91,7 @@ def main(params):
 
 	EPOCHS = params.epochs
 	all_steps = 0
-
+	
 	writer = SummaryWriter(f'{params.save_dir}/ner_{params.model_id}')
 	early_stopping = EarlyStopping(patience=5, verbose=True, save_path=f'{params.save_dir}/ner_{params.model_id}.pt')
 	print(params)
@@ -160,7 +160,7 @@ def main(params):
 			if early_stopping.early_stop:
 				print('Early stopping')
 				break 
-
+	print('\n-------------Testing---------------------\n')
 	################ Testing ################
 	outputs, sps = [], []
 	test_loss, test_steps = 0,0
@@ -174,6 +174,7 @@ def main(params):
 			wmask = data['wmask'].to(params.device)
 			tar = data['targets'].to(params.device)
 			sp = data['spans'].to(params.device)
+			inp = (cids, wids, sp, cmask, wmask) 
 			d_output = model(inp).squeeze(-1)
 			#d_output = model(ids).squeeze(-1)
 			sps.append(sp.cpu().detach().numpy())
@@ -185,7 +186,7 @@ def main(params):
 	print(f'\n------- Test loss : {test_loss/ test_steps}')
 	if params.save_preds:
 		sps = np.asarray(sps); sps = np.vstack(sps)
-		ooo = torch.from_numpy(np.vstack(outputs)>1).float()
+		ooo = torch.from_numpy(np.vstack(outputs)>1).float(); print(sps.shape, ooo.shape)
 		create_pred_file(test_df, ooo,np.asarray(sps), name=params.model_id, save_dir=params.save_dir, level=params.level)
 		print(f'Test prediction saved!!')
 
@@ -227,7 +228,7 @@ if __name__ == '__main__':
 						help="Learning rate of loss optimization")
 	parser.add_argument('--test_every', default=5, type=int,
 					   help='Testing after steps')
-	parser.add_argument('--save_dir', default='./.model/',
+	parser.add_argument('--save_dir', default='~/bio-challenge/.model/',
 					   help='Model dir')
 	parser.add_argument('--model_id', default=1,
 					   help='model name identifier')

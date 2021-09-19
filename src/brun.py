@@ -73,8 +73,8 @@ def main(params):
 	#	print(data['ids'].shape)
 	#return
 
-	model = charner(params).to(device=params.device)
-	#model = bertner(params).to(device=params.device)
+	#model = charner(params).to(device=params.device)
+	model = bertner(params).to(device=params.device)
 
 	loss_function = torch.nn.BCEWithLogitsLoss() #torch.nn.CrossEntropyLoss()
 	optimizer = torch.optim.Adam(params =model.parameters(), lr=params.lr)
@@ -94,10 +94,10 @@ def main(params):
 			optimizer.zero_grad()
 			ids = data['ids'].to(params.device, dtype=torch.long)
 			tar = data['targets'].to(params.device)
-			sp = data['spans'].to(params.device)
-			#attm = data['attn_mask'].to(params.device) # for use_bert
-			#inp = (ids, attm, sp) if params.use_bert else ids # for use_bert
-			inp = ids
+			sp = data['cspans'].to(params.device)
+			bsp = data['bspans'].to(params.device)
+			attm = data['attn_mask'].to(params.device) # for use_bert
+			inp = (ids, attm, bsp) if params.use_bert else ids # for use_bert
 			output = model(inp).squeeze(-1)#;continue
 			#output = model(ids).squeeze(-1)
 			#print(output.shape, output[0], sp[0])
@@ -123,9 +123,10 @@ def main(params):
 					
 					ids = data['ids'].to(params.device, dtype=torch.long)
 					tar = data['targets'].to(params.device)
-					sp = data['spans'].to(params.device)
-					#attm = data['attn_mask'].to(params.device)
-					inp = ids #inp = (ids, attm, sp) if params.use_bert else ids
+					sp = data['cspans'].to(params.device)
+					bsp = data['bspans'].to(params.device)
+					attm = data['attn_mask'].to(params.device)
+					inp = (ids, attm, bsp) if params.use_bert else ids
 					d_output = model(inp).squeeze(-1)
 					#d_output = model(ids).squeeze(-1)
 					outputs.append(d_output.cpu().detach().numpy())
@@ -156,9 +157,10 @@ def main(params):
 			
 			ids = data['ids'].to(params.device, dtype=torch.long)
 			tar = data['targets'].to(params.device)
-			sp = data['spans'].to(params.device)
-			#attm = data['attn_mask'].to(params.device)
-			inp = ids #(ids, attm, sp) if params.use_bert else ids
+			sp = data['cspans'].to(params.device)
+			bsp = data['bspans'].to(params.device)
+			attm = data['attn_mask'].to(params.device)
+			inp = (ids, attm, bsp) if params.use_bert else ids
 			d_output = model(inp).squeeze(-1)
 			#d_output = model(ids).squeeze(-1)
 			sps.append(sp.cpu().detach().numpy())

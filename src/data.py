@@ -90,7 +90,7 @@ class biodata2(Dataset):
         else:
             self.max_len = max_len
         #print(f'name: {name}, max_len : {self.max_len}')
-        self.max_len = 100
+        #self.max_len = 100
         self.use_bert = use_bert
         self.bertmodel = AutoModel.from_pretrained("cardiffnlp/twitter-roberta-base")#; self.bertmodel.save_pretrained("cardiffnlp/twitter-roberta-base")
         self.tokenizer = AutoTokenizer.from_pretrained("cardiffnlp/twitter-roberta-base")#; self.tokenizer.save_pretrained("cardiffnlp/twitter-roberta-base")
@@ -115,7 +115,8 @@ class biodata2(Dataset):
 
             tok_ids, attn_mask, spans = self.encoder.encode(seq=sen.split(' '), pad=self.max_len)
             return {'ids': tok_ids,
-                    'spans': spans,
+                    'bspans': spans,
+		    'cspans': torch.tensor(self.make_span(sen,pad=True), dtype=torch.long),
                     'attn_mask': attn_mask,
                     'targets': torch.tensor(self.make_label(sen, start, end), dtype=torch.float64)}
 
@@ -335,11 +336,11 @@ class biodata3(Dataset):
                 spans.append([start, end])
                 start = end
         spans.append([start, end])
-        if len(spans) < self.cmax_len:
-            diff = self.cmax_len- len(spans)
+        if len(spans) < self.wmax_len:
+            diff = self.wmax_len- len(spans)
             for i in range(diff):
                 spans.append([end,end])
-        return spans[:self.cmax_len]
+        return spans[:self.wmax_len]
 
     def __len__(self):
         return self.len

@@ -177,8 +177,11 @@ class cwner(nn.Module):
         #print(len(indices), len(char_embedding[char_mask]))
         average_vectors.index_add_(0, indices, char_embedding[char_mask].to(device=self.device))
         average_vectors.div_(n_bpe.view(n_bpe.size(0),1))
-
-        output_ = torch.zeros_like(wemb)
+        #padding = (average_vectors.shape, output_[wmask].size(0) - average_vectors.size(0))
+        #average_vectors = torch.vstack((average_vectors,torch.zeros(padding, char_embedding.size(-1))))
+        output_ = torch.zeros_like(wemb)#; print(average_vectors.shape, output_[wmask].shape)
+        padding = output_[wmask].size(0) - average_vectors.size(0)
+        average_vectors = torch.vstack((average_vectors,torch.zeros(padding, char_embedding.size(-1)).to(self.device))).to(self.device)
         output_[wmask] = average_vectors
 
         return output_
