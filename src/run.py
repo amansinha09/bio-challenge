@@ -24,7 +24,7 @@ def main(params):
 	#return
 	# Load dataset
 	train_df0 = pd.read_csv('~/bio-challenge/data/BioCreative_TrainTask3.0.tsv', sep='\t')
-	#test_df = pd.read_csv('~/bio-challenge/data/BioCreative_ValTask3.tsv', sep='\t')
+	test_df1 = pd.read_csv('~/bio-challenge/data/BioCreative_ValTask3.tsv', sep='\t')
 	test_df = pd.read_csv('~/bio-challenge/data/BioCreative_TEST_Task3_PARTICIPANTS.tsv',sep='\t')
 	train_df1 = pd.read_csv('~/bio-challenge/data/SMM4H18_train_modified.csv', sep='\t')
 	train_df1 = train_df1.drop(columns=['Unnamed: 0'], axis=1)
@@ -53,6 +53,7 @@ def main(params):
 	train_set = biodata2(train_df, name='train', level=params.level, use_bert=params.use_bert)
 	dev_set = biodata2(dev_df, vocab=train_set.vocab, name='dev', max_len = train_set.max_len, level=params.level, use_bert=params.use_bert)
 	test_set = biodata2(test_df, vocab=train_set.vocab, name='test', max_len= train_set.max_len, level=params.level, use_bert=params.use_bert)
+	test_set1 = biodata2(test_df1, vocab=train_set.vocab, name='test', max_len= train_set.max_len, level=params.level, use_bert=params.use_bert)
 
 	params.vocabsize = len(train_set.vocab)
 	print(len(train_set.vocab))
@@ -68,6 +69,7 @@ def main(params):
 	trainloader = DataLoader(train_set, **train_params, drop_last=True)
 	devloader = DataLoader(dev_set, **dev_params)
 	testloader = DataLoader(test_set, **test_params)
+	testloader1 = DataLoader(test_set1, **test_params)
 
 	#for _,data in enumerate(trainloader):
 	#	print(data['ids'].shape)
@@ -147,7 +149,37 @@ def main(params):
 				print('Early stopping')
 				break 
 
-	################ Testing ################
+	################ Testing 1################
+	print('\n-------------Testing2 on biodev---------------------\n')
+	outputs, sps = [], []
+	test_loss, test_steps = 0,0
+	model.eval()
+	with torch.no_grad():
+		for _, data in tqdm(enumerate(testloader1)):
+			
+			ids = data['ids'].to(params.device, dtype=torch.long)
+			tar = data['targets'].to(params.device)
+			sp = data['spans'].to(params.device)
+			#attm = data['attn_mask'].to(params.device)
+			inp = ids #(ids, attm, sp) if params.use_bert else ids
+			d_output = model(inp).squeeze(-1)
+			#d_output = model(ids).squeeze(-1)
+			sps.append(sp.cpu().detach().numpy())
+			outputs.append(d_output.cpu().detach().numpy())
+			d_loss = loss_function(d_output, tar)
+			test_loss += d_loss.item()
+			test_steps += 1
+
+	print(f'\n------- Test loss : {test_loss/ test_steps}')
+	if params.save_preds:
+		sps = np.asarray(sps); sps = np.vstack(sps)
+		ooo = torch.from_numpy(np.vstack(outputs)>1).float()
+		create_pred_file(test_df, ooo,np.asarray(sps), name=f'biodev_{params.model_id}', save_dir=params.save_dir, level=params.level)
+		print(f'Test prediction saved!!')
+
+
+	################ Testing 2################
+	print('\n-------------Testing2 on biotest---------------------\n')
 	outputs, sps = [], []
 	test_loss, test_steps = 0,0
 	model.eval()
@@ -171,7 +203,7 @@ def main(params):
 	if params.save_preds:
 		sps = np.asarray(sps); sps = np.vstack(sps)
 		ooo = torch.from_numpy(np.vstack(outputs)>1).float()
-		create_pred_file(test_df, ooo,np.asarray(sps), name=params.model_id, save_dir=params.save_dir, level=params.level)
+		create_pred_file(test_df, ooo,np.asarray(sps), name=f'biotest_{params.model_id}', save_dir=params.save_dir, level=params.level)
 		print(f'Test prediction saved!!')
 
 
